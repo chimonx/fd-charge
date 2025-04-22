@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET Route for checking source status using the secret key
+// GET Route for checking source status and capture charge if authorized
 router.get('/source/:id/check-status', async (req, res) => {
   const sourceId = req.params.id;
 
@@ -60,18 +60,31 @@ router.get('/source/:id/check-status', async (req, res) => {
   }
 
   try {
-    // Retrieve source status using the secret key
-    const sourceStatus = await omiseSecret.sources.retrieve(sourceId);
+    // Retrieve charge list to find charges using this source
+    const charges = await omiseSecret.charges.list({ limit: 20 });
+    const targetCharge = charges.data.find(charge => charge.source && charge.source.id === sourceId);
 
-    // Log the result from Omise
-    console.log('Source status retrieved successfully:', sourceStatus);
+    if (!targetCharge) {
+      return res.status(404).json({ error: 'Charge not found for this source' });
+    }
 
-    res.json(sourceStatus);
+    // Check if the charge is authorized
+    if (targetCharge.status !== 'authorized') {
+      return res.json({ id: targetCharge.id, status: targetCharge.status });
+    }
+
+    // Capture the charge if it is authorized
+    const captured = await omiseSecret.charges.capture(targetCharge.id);
+
+    console.log('Charge captured successfully:', captured);
+
+    // Return only id and status of the captured charge
+    res.json({ id: captured.id, status: captured.status });
   } catch (error) {
     // Detailed error logging
-    console.error('Failed to retrieve source status:', error.response || error.message);
+    console.error('Failed to capture charge:', error.response || error.message);
 
-    res.status(500).json({ error: 'Failed to retrieve source status', details: error.message });
+    res.status(500).json({ error: 'Failed to capture charge', details: error.message });
   }
 });
 
