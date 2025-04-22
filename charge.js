@@ -47,44 +47,27 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET Route for checking source status and capture charge if authorized
-router.get('/source/:id/check-status', async (req, res) => {
-  const sourceId = req.params.id;
+// GET Route for checking payment status using charge ID
+router.get('/charge/:id/status', async (req, res) => {
+  const chargeId = req.params.id;
 
-  // Log the received sourceId
-  console.log('Checking status for source:', sourceId);
+  console.log('Checking payment status for charge ID:', chargeId);
 
-  if (!sourceId) {
-    console.error('Error: Missing sourceId');
-    return res.status(400).json({ error: 'Missing sourceId' });
+  if (!chargeId) {
+    console.error('Error: Missing charge ID');
+    return res.status(400).json({ error: 'Missing charge ID' });
   }
 
   try {
-    // Retrieve charge list to find charges using this source
-    const charges = await omiseSecret.charges.list({ limit: 20 });
-    const targetCharge = charges.data.find(charge => charge.source && charge.source.id === sourceId);
+    const charge = await omiseSecret.charges.retrieve(chargeId);
 
-    if (!targetCharge) {
-      return res.status(404).json({ error: 'Charge not found for this source' });
-    }
+    console.log('Charge status retrieved:', charge.status);
 
-    // Check if the charge is authorized
-    if (targetCharge.status !== 'authorized') {
-      return res.json({ id: targetCharge.id, status: targetCharge.status });
-    }
-
-    // Capture the charge if it is authorized
-    const captured = await omiseSecret.charges.capture(targetCharge.id);
-
-    console.log('Charge captured successfully:', captured);
-
-    // Return only id and status of the captured charge
-    res.json({ id: captured.id, status: captured.status });
+    res.json({ status: charge.status, charge });
   } catch (error) {
-    // Detailed error logging
-    console.error('Failed to capture charge:', error.response || error.message);
+    console.error('Failed to retrieve charge status:', error.response || error.message);
 
-    res.status(500).json({ error: 'Failed to capture charge', details: error.message });
+    res.status(500).json({ error: 'Failed to retrieve charge status', details: error.message });
   }
 });
 
