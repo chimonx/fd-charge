@@ -1,68 +1,31 @@
 const express = require('express');
-const cors = require('cors');  // ใช้ CORS package
-const Omise = require('omise');
-const chargeRoute = require('./charge'); // import charge route
+const cors = require('cors');
+const chargeRoute = require('./charge');
 const app = express();
 
-// ตั้งค่า CORS
+// CORS settings
 const allowedOrigins = [
-  'https://spiffy-duckanoo-f9b409.netlify.app', // Example: Netlify URL
-  // You can add more allowed origins here
+  'https://spiffy-duckanoo-f9b409.netlify.app',
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {  // Allowing for localhost and other domains
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'), false);
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],  // อนุญาตเฉพาะ HTTP methods ที่ต้องการ
-  allowedHeaders: ['Content-Type', 'Authorization']  // อนุญาตเฉพาะ headers ที่จำเป็น
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Initialize Omise API client
-const omise = Omise({
-  secretKey: process.env.OMISE_SECRET_KEY,
-  omiseVersion: '2020-05-29'
-});
-
-// Use JSON parser middleware
 app.use(express.json());
 
-// Charge route
-app.use('/charge', chargeRoute);  // route สำหรับ charge
+// Mount all charge-related routes
+app.use('/charge', chargeRoute);
 
-// GET Route for checking source status
-app.get('/source/:id/check-status', async (req, res) => {
-  const sourceId = req.params.id;
-
-  // Log ข้อมูลที่รับมา
-  console.log('Checking status for source:', sourceId);
-
-  if (!sourceId) {
-    console.log('Missing sourceId');
-    return res.status(400).json({ error: 'Missing sourceId' });
-  }
-
-  try {
-    // Retrieve source status from Omise
-    const sourceStatus = await omise.sources.retrieve(sourceId);
-
-    // Log ผลลัพธ์จาก Omise
-    console.log('Source status retrieved successfully:', sourceStatus);
-
-    res.json(sourceStatus);
-  } catch (error) {
-    // Log ข้อผิดพลาดที่เกิดขึ้น
-    console.error('Failed to retrieve source status:', error);
-
-    res.status(500).json({ error: 'Failed to retrieve source status' });
-  }
-});
-
-// Error handling middleware for CORS-related issues
+// Handle CORS errors
 app.use((err, req, res, next) => {
   if (err && err.message === 'Not allowed by CORS') {
     return res.status(403).json({ error: 'CORS Error: Access denied.' });
