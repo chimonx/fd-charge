@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
+require('dotenv').config(); 
+
 const Omise = require('omise');
 
 const omise = Omise({
-  secretKey: 'skey_test_5vtenkvhlas6pps21rz',
+  secretKey: process.env.OMISE_SECRET_KEY,
   omiseVersion: '2020-05-29'
 });
+
 
 router.post('/', async (req, res) => {
   const { sourceId, amount } = req.body;
