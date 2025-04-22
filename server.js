@@ -35,7 +35,7 @@ app.use(express.json());
 app.use('/charge', chargeRoute);  // route สำหรับ charge
 
 // GET Route for checking source status
-app.get('/api/source/:id/check-status', async (req, res) => {
+app.get('/source/:id/check-status', async (req, res) => {
   const sourceId = req.params.id;
 
   // Log ข้อมูลที่รับมา
