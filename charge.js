@@ -4,9 +4,15 @@ require('dotenv').config();
 
 const Omise = require('omise');
 
-const omise = Omise({
-  secretKey: process.env.OMISE_SECRET_KEY,
-  omiseVersion: '2020-05-29'
+// Initialize Omise with both secret and public keys
+const omisePublic = Omise({
+  publicKey: 'pkey_test_5vtenkt0w8cggb5t33q',  // Public key
+  omiseVersion: '2020-05-29',
+});
+
+const omiseSecret = Omise({
+  secretKey: process.env.OMISE_SECRET_KEY,  // Secret key from your .env file
+  omiseVersion: '2020-05-29',
 });
 
 // POST Route for creating charge
@@ -23,7 +29,7 @@ router.post('/', async (req, res) => {
 
   try {
     // สร้าง charge
-    const charge = await omise.charges.create({
+    const charge = await omiseSecret.charges.create({
       amount,
       currency: 'THB',
       source: sourceId
@@ -41,7 +47,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET Route for checking source status
+// GET Route for checking source status using public key
 router.get('/source/:id/check-status', async (req, res) => {
   const sourceId = req.params.id;
 
@@ -54,8 +60,8 @@ router.get('/source/:id/check-status', async (req, res) => {
   }
 
   try {
-    // Retrieve source status from Omise
-    const sourceStatus = await omise.sources.retrieve(sourceId);
+    // Retrieve source status using the public key
+    const sourceStatus = await omisePublic.sources.retrieve(sourceId);
 
     // Log ผลลัพธ์จาก Omise
     console.log('Source status retrieved successfully:', sourceStatus);
