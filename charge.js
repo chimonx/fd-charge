@@ -1,73 +1,63 @@
+// charge.js
 const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 
 const Omise = require('omise');
 
-// Initialize Omise with both secret and public keys
-const omisePublic = Omise({
-  publicKey: 'pkey_test_5vtenkt0w8cggb5t33q',  // Public key for public operations
-  omiseVersion: '2020-05-29',
-});
-
+// Initialize Omise
 const omiseSecret = Omise({
-  secretKey: process.env.OMISE_SECRET_KEY,  // Secret key for authenticated operations
+  secretKey: process.env.OMISE_SECRET_KEY,
   omiseVersion: '2020-05-29',
 });
 
-// POST Route for creating charge
+// POST /charge
 router.post('/', async (req, res) => {
   const { sourceId, amount } = req.body;
-
-  // Log the received data
   console.log('Received request:', { sourceId, amount });
-
   if (!sourceId || !amount) {
-    console.error('Error: Missing sourceId or amount');
     return res.status(400).json({ error: 'Missing sourceId or amount' });
   }
-
   try {
-    // Create charge using the secret key
     const charge = await omiseSecret.charges.create({
       amount,
       currency: 'THB',
       source: sourceId,
     });
-
-    // Log the result from Omise
-    console.log('Charge created successfully:', charge);
-
+    console.log('Charge created:', charge.id);
     res.json(charge);
   } catch (error) {
-    // Detailed error logging
-    console.error('Failed to create charge:', error.response || error.message);
-
+    console.error('Failed to create charge:', error.message);
     res.status(500).json({ error: 'Failed to create charge', details: error.message });
   }
 });
 
-// GET Route for checking payment status using charge ID
-router.get('/charge/:id/status', async (req, res) => {
-  const chargeId = req.params.id;
 
-  console.log('Checking payment status for charge ID:', chargeId);
-
-  if (!chargeId) {
-    console.error('Error: Missing charge ID');
-    return res.status(400).json({ error: 'Missing charge ID' });
+// GET /charge/:id/status
+// — ถ้ารหัสขึ้นต้น src_ => เช็ค source status
+// — ถ้าขึ้นต้น chrg_ หรืออื่นๆ => เช็ค charge status
+router.get('/:id/status', async (req, res) => {
+  const id = req.params.id;
+  console.log('Checking status for ID:', id);
+  if (!id) {
+    return res.status(400).json({ error: 'Missing ID parameter' });
   }
 
   try {
-    const charge = await omiseSecret.charges.retrieve(chargeId);
-
-    console.log('Charge status retrieved:', charge.status);
-
-    res.json({ status: charge.status, charge });
+    if (id.startsWith('src_')) {
+      // เช็คสถานะ source
+      const source = await omiseSecret.sources.retrieve(id);
+      console.log('Source status:', source.status);
+      return res.json({ type: 'source', status: source.status, source });
+    } else {
+      // เช็คสถานะ charge
+      const charge = await omiseSecret.charges.retrieve(id);
+      console.log('Charge status:', charge.status);
+      return res.json({ type: 'charge', status: charge.status, charge });
+    }
   } catch (error) {
-    console.error('Failed to retrieve charge status:', error.response || error.message);
-
-    res.status(500).json({ error: 'Failed to retrieve charge status', details: error.message });
+    console.error('Failed to retrieve status:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve status', details: error.message });
   }
 });
 
