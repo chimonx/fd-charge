@@ -6,12 +6,12 @@ const Omise = require('omise');
 
 // Initialize Omise with both secret and public keys
 const omisePublic = Omise({
-  publicKey: 'pkey_test_5vtenkt0w8cggb5t33q',  // Public key
+  publicKey: 'pkey_test_5vtenkt0w8cggb5t33q',  // Public key for public operations
   omiseVersion: '2020-05-29',
 });
 
 const omiseSecret = Omise({
-  secretKey: process.env.OMISE_SECRET_KEY,  // Secret key from your .env file
+  secretKey: process.env.OMISE_SECRET_KEY,  // Secret key for authenticated operations
   omiseVersion: '2020-05-29',
 });
 
@@ -19,59 +19,59 @@ const omiseSecret = Omise({
 router.post('/', async (req, res) => {
   const { sourceId, amount } = req.body;
 
-  // Log ข้อมูลที่รับมา
+  // Log the received data
   console.log('Received request:', { sourceId, amount });
 
   if (!sourceId || !amount) {
-    console.log('Missing sourceId or amount');
+    console.error('Error: Missing sourceId or amount');
     return res.status(400).json({ error: 'Missing sourceId or amount' });
   }
 
   try {
-    // สร้าง charge
+    // Create charge using the secret key
     const charge = await omiseSecret.charges.create({
       amount,
       currency: 'THB',
-      source: sourceId
+      source: sourceId,
     });
 
-    // Log ผลลัพธ์จาก Omise
+    // Log the result from Omise
     console.log('Charge created successfully:', charge);
 
     res.json(charge);
   } catch (error) {
-    // Log ข้อผิดพลาดที่เกิดขึ้น
-    console.error('Failed to create charge:', error);
+    // Detailed error logging
+    console.error('Failed to create charge:', error.response || error.message);
 
-    res.status(500).json({ error: 'Failed to create charge' });
+    res.status(500).json({ error: 'Failed to create charge', details: error.message });
   }
 });
 
-// GET Route for checking source status using public key
+// GET Route for checking source status using the secret key
 router.get('/source/:id/check-status', async (req, res) => {
   const sourceId = req.params.id;
 
-  // Log ข้อมูลที่รับมา
+  // Log the received sourceId
   console.log('Checking status for source:', sourceId);
 
   if (!sourceId) {
-    console.log('Missing sourceId');
+    console.error('Error: Missing sourceId');
     return res.status(400).json({ error: 'Missing sourceId' });
   }
 
   try {
-    // Retrieve source status using the public key
-    const sourceStatus = await omisePublic.sources.retrieve(sourceId);
+    // Retrieve source status using the secret key
+    const sourceStatus = await omiseSecret.sources.retrieve(sourceId);
 
-    // Log ผลลัพธ์จาก Omise
+    // Log the result from Omise
     console.log('Source status retrieved successfully:', sourceStatus);
 
     res.json(sourceStatus);
   } catch (error) {
-    // Log ข้อผิดพลาดที่เกิดขึ้น
-    console.error('Failed to retrieve source status:', error);
+    // Detailed error logging
+    console.error('Failed to retrieve source status:', error.response || error.message);
 
-    res.status(500).json({ error: 'Failed to retrieve source status' });
+    res.status(500).json({ error: 'Failed to retrieve source status', details: error.message });
   }
 });
 
